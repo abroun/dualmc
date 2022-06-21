@@ -5,3 +5,7 @@ gentables.exe
 *.obj
 *.o
 *.dep
+
+.vscode/
+build/
+

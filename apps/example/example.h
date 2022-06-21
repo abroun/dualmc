@@ -38,6 +38,7 @@ private:
         bool generateQuadSoup;
         bool generateManifold;
         std::string outputFile;
+        float outputScale;
     };
 
     /// Parse program arguments.
@@ -54,7 +55,10 @@ private:
     void computeSurface(float const iso, bool const generateSoup, bool const generateManifold);
     
     /// Write a Wavefront OBJ model for the extracted ISO surface.
-    void writeOBJ(std::string const & fileName) const;
+    void writeOBJ(std::string const & fileName, float scale=1.0f) const;
+
+    /// Write a PLY model for the extracted ISO surface.
+    void writePLY(std::string const & fileName, float scale=1.0f) const;
     
     /// Print program arguments.
     void printArgs() const;

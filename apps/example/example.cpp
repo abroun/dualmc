@@ -57,7 +57,14 @@ void DualMCExample::run(int const argc, char** argv) {
     computeSurface(options.isoValue,options.generateQuadSoup,options.generateManifold);
     
     // write output file
-    writeOBJ(options.outputFile);
+    if (strcasecmp(options.outputFile.substr(options.outputFile.length() - 4).c_str(), ".ply") == 0)
+    {
+        writePLY(options.outputFile, options.outputScale);
+    }
+    else
+    {
+        writeOBJ(options.outputFile, options.outputScale);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -73,6 +80,7 @@ bool DualMCExample::parseArgs(int const argc, char** argv, AppOptions & options)
     options.generateQuadSoup = false;
     options.generateManifold = false;
     options.outputFile.assign("surface.obj");
+    options.outputScale = 1.0f;
     
     // parse arguments
     for(int currentArg = 1; currentArg < argc; ++currentArg) {
@@ -101,6 +109,15 @@ bool DualMCExample::parseArgs(int const argc, char** argv, AppOptions & options)
                 return false;
             }
             options.outputFile.assign(argv[currentArg+1]);
+            ++currentArg;
+        } else if(strcmp(argv[currentArg],"-outScale") == 0) {
+            if(currentArg+1 == argc) {
+                std::cerr << "Output scale value missing" << std::endl;
+                return false;
+            }
+            // Read the output scale value
+            // Invalid values are set to 0.
+            options.outputScale = atof(argv[currentArg+1]);
             ++currentArg;
         } else if(strcmp(argv[currentArg],"-raw") == 0) {
             if(currentArg+4 >= argc) {
@@ -134,6 +151,7 @@ void DualMCExample::printArgs() const {
     std::cout << " -manifold          use Manifold Dual Marching Cubes algorithm (Rephael Wenger)" << std::endl;
     std::cout << " -iso X             specify iso value X in [0,1]. DEFAULT: 0.5" << std::endl;
     std::cout << " -out FILE          specify output file name. DEFAULT: surface.obj" << std::endl;
+    std::cout << " -outScale X        specify a value to scale the output mesh by. DEFAULT: 1.0" << std::endl;
     std::cout << " -soup              generate a quad soup (no vertex sharing)" << std::endl;
 }
 
@@ -322,7 +340,7 @@ bool DualMCExample::loadRawFile(std::string const & fileName, int32_t dimX, int3
 
 //------------------------------------------------------------------------------
 
-void DualMCExample::writeOBJ(std::string const & fileName) const {
+void DualMCExample::writeOBJ(std::string const & fileName, float scale) const {
     std::cout << "Writing OBJ file" << std::endl;
     // check if we actually have an ISO surface
     if(vertices.size () == 0 || quads.size() == 0) {
@@ -342,7 +360,7 @@ void DualMCExample::writeOBJ(std::string const & fileName) const {
     
     // write vertices
     for(auto const & v : vertices) {
-        file << "v " << v.x << ' ' << v.y << ' ' << v.z << '\n';
+        file << "v " << v.x*scale << ' ' << v.y*scale << ' ' << v.z*scale << '\n';
     }
     
     // write quad indices
@@ -351,6 +369,44 @@ void DualMCExample::writeOBJ(std::string const & fileName) const {
     }
     
     file.close();
+}
+
+//------------------------------------------------------------------------------
+
+void DualMCExample::writePLY(std::string const & fileName, float scale) const {
+    std::cout << "Writing PLY file" << std::endl;
+    // check if we actually have an ISO surface
+    if(vertices.size () == 0 || quads.size() == 0) {
+        std::cout << "No ISO surface generated. Skipping PLY generation." << std::endl;
+        return;
+    }
+
+    // Write out PLY header
+    std::ofstream plyFile(fileName);
+
+    plyFile << "ply" << std::endl;
+
+    plyFile << "format ascii 1.0" << std::endl;
+    plyFile << "element vertex " << vertices.size() << std::endl;
+    plyFile << "property float x" << std::endl;
+    plyFile << "property float y" << std::endl;
+    plyFile << "property float z" << std::endl;
+    plyFile << "element face " << 2*quads.size() << std::endl;
+    plyFile << "property list uchar int vertex_index" << std::endl;
+    plyFile << "end_header" << std::endl;
+
+    // Write out vertices
+    for(auto const & v : vertices) {
+        plyFile << v.x*scale << ' ' << v.y*scale << ' ' << v.z*scale << '\n';
+    }
+
+    // Write out faces as triangles
+    for(auto const & q : quads) {
+        plyFile << "3 " << (q.i0) << ' ' << (q.i1) << ' ' << (q.i2) << '\n';
+        plyFile << "3 " << (q.i2) << ' ' << (q.i3) << ' ' << (q.i0) << '\n';
+    }
+
+    plyFile.close();
 }
 
 //------------------------------------------------------------------------------
